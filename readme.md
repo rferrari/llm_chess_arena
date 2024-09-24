@@ -1,3 +1,10 @@
+# Now with visual Live Action Game
+
+My contribution (so far):
+
+<img src="./images/action-game.gif"/>
+<img src="./images/live-action-game.png"/>
+
 # LLM Chess Arena
 
 <img src="./images/video.gif"/>
@@ -36,3 +43,5 @@ OPENAI_API_KEY=sua-chave
 7. Open game folder at ./playser vs player/game_1/
 8. Open _live_game.png picture Viewer that reload image on change.
 
+<img src="./images/action-game.gif"/>
+<img src="./images/live-action-game.png"/>
