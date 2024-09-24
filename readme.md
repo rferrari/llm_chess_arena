@@ -29,3 +29,10 @@ OPENAI_API_KEY=sua-chave
 
 6. Execute o script `chess_arena_with_judge.py`
 
+
+
+## PNG Live Action Game
+
+7. Open game folder at ./playser vs player/game_1/
+8. Open _live_game.png picture Viewer that reload image on change.
+
