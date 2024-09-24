@@ -34,19 +34,15 @@ memory2 = ConversationBufferMemory(memory_key="chat_history", input_key="input")
 
 # Definindo os prompts para as LLMs
 system_template = """
-You are a Chess Grandmaster.
-We are currently playing chess. 
-You are playing with the {color} pieces.
-    
-I will give you the last move, the history of the game so far, the
-actual board position and you must analyze the position and find the best move.
+You are a Chess Grandmaster playing chess with {color} pieces.
+You will receve the last move and the current board positions.
+You must analyze the board and choose the best move to win the game.
 
 # OUTPUT
-Do not use any special characters. 
-Give your response in the following order:
-
-1. Your move, using the following format: My move: "Move" (in the SAN notation, in english).
-2. The explanation, in Portuguese, of why you chose the move, in no more than 3 sentences.
+DO NOT use any special characters. 
+Response in the following order:
+1. Your move in English SAN Notation using the following format: My move: "Move"
+2. A explanation why you choose this move in Portuguese; No more than 3 sentences.
 """
 
 prompt_template1 = ChatPromptTemplate.from_messages([
@@ -63,25 +59,19 @@ chain1 = prompt_template1 | llm1
 chain2 = prompt_template2 | llm2
 
 judge_template = """
-You are a professional chess arbiter, working on a LLM's Chess Competition.
+You are a professional chess arbiter, working on Chess Competition.
 
 Your job is to parse last player's move and ensure that all chess moves are valid and correctly formatted in 
 Standard Algebraic Notation (SAN) for processing by the python-chess library.
 
-### Input:
-- Last player's  move
-- List of valid moves in SAN
+# Player Move:
+- Proposed move: {proposed_move}
+- List of valid moves: {valid_moves}
 
 ### Output:
 - Return the corresponding move in the list of valid SAN moves.
 - If the proposed move is not in the valid moves list, must respond with "None"
-
-### Your turn:
-- Proposed move: {proposed_move}
-- List of valid moves: {valid_moves}
-
-You should only respond the valid move, without the move number, nothing more.
-Your response:
+- ONLY respond the valid move, without the move number, nothing more.
 """
 
 llm3 = ChatGroq(temperature=0, model_name="llama3-70b-8192")
@@ -157,25 +147,27 @@ def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
     legal_moves = list(board.legal_moves)
     san_moves = str([board.san(move) for move in legal_moves])
 
-    #sleep(5) # uncomment for some LLM versions do not return high usage error)
+    print(str(f" {color} Turn ").center(30,"-"))
+    sleep(5) # uncomment for free versions do not return high usage error)
 
-    template_input=""" 
-Here's the history of the game:
-{history}
+    template_input="""
+Actual board position:
+{str_board}
 
-The last move played was: 
-{last_move}   
+Last move:
+{last_move}
 
 Find the best move.
 """
-    
+
     if not alert_msg:
         user_input = template_input.format(
-                                    last_move=last_move,
-                                    history=history)
+                                    str_board=str_board
+                                    last_move=last_move) #,
+                                    # history=history)
     else:  
         user_input="""
-Here's the actual board position: 
+Actual board position:
 {str_board}
 
 Here is the game history so far:
@@ -184,17 +176,15 @@ Here is the game history so far:
 The last move played was: 
 {last_move}   
 
-Here's a list of valid moves in this position:
+You MUST choose a valid moves for this position:
 {san_moves}
-
-You must choose one of the valid moves.
 """.format(san_moves=san_moves, 
         history=history, 
         str_board=str_board,
         last_move=last_move,
         )
-        
-    
+
+
     response = llm_chain.invoke({"input": user_input})
     # move_raw = response["text"].strip()
     move_raw = response.content.strip()
