@@ -201,7 +201,7 @@ You must choose one of the valid moves.
     
     try:
         if alert_msg:
-            print("Alerting player!")
+            print("\nAlerting player!\n")
             print(move_raw)
 
         move = chain3.invoke({"proposed_move": move_raw,
@@ -230,12 +230,18 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
 
     game_num, folder_name = get_next_game_number(white_player, black_player)
     print(f"Starting game {game_num} in folder: {folder_name}")
+
     turn = 1
+    white_quit = False
+    black_quit = False
 
     print("============")
     print(f"New Game with {move1}")
     board = chess.Board()
     
+    # Record the start time
+    start_time = time()
+
     # Definir o nó atual como o nó raiz do jogo
     game = chess.pgn.Game()
     node = game
@@ -258,20 +264,34 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
             alert = False if c == 0 else True
             move2, node = get_move(chain2, move1, board, node, "black", alert)
             c += 1
+            if (c > 5):
+                print("\n========================")
+                print("Black Quit")
+                black_quit = True
+                print("\n========================")
+                break
         print("\n========================")
+        
         turn = screenshot_turn(board,turn,folder_name,game_num)
-        if board.is_game_over():
+        if (board.is_game_over() or (black_quit)):
             break
-      
+
         move1 = None
         c = 0
         while move1 is None:
             alert = False if c == 0 else True
             move1, node = get_move(chain1, move2, board, node, "white", alert)
             c+=1
+            if (c > 5):
+                print("\n========================")
+                print("White Quit")
+                white_quit = True
+                print("\n========================")
+                break
         print("\n========================")
 
-        if board.is_game_over():
+        turn = screenshot_board(board,turn,folder_name,game_num)
+        if (board.is_game_over() or (white_quit)):
             break
         # game = chess.pgn.Game.from_board(board)
         # print(str(game))
@@ -280,11 +300,20 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
         # game = chess.pgn.Game.from_board(board)
         #game.headers["White"] = white_player
         #game.headers["Black"] = black_player
+
         with open(f"{folder_name}/{game_num}_game.pgn", "w") as f:
             f.write(str(game))
         # print("\n========================")
         # print(game)
 
+    # Record the end time
+    print()
+    end_time = time()
+    # Calculate the elapsed time minutes and seconds
+    elapsed_time = end_time - start_time
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
+    print(f"Elapsed time: {minutes} minutes and {seconds} seconds\n")
 
     if board.is_stalemate() or board.is_insufficient_material() or board.is_seventyfive_moves() or board.is_fivefold_repetition():
         result = "1/2-1/2"
