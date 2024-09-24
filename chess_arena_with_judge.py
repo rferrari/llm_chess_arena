@@ -161,9 +161,9 @@ Find the best move.
 """
 
     if not alert_msg:
-        user_input = template_input.format(
-                                    str_board=str_board
-                                    last_move=last_move) #,
+        user_input = template_input.format(str_board=str_board,
+                                    last_move=last_move) 
+                                    #,
                                     # history=history)
     else:  
         user_input="""
