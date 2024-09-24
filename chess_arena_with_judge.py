@@ -1,3 +1,5 @@
+from time import sleep, time
+
 import chess
 import chess.pgn
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
@@ -9,6 +11,8 @@ from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import LLMChain
 import chess.pgn
+import cairosvg
+
 import re
 import os
 _ = load_dotenv(find_dotenv())
@@ -30,20 +34,20 @@ memory2 = ConversationBufferMemory(memory_key="chat_history", input_key="input")
 
 # Definindo os prompts para as LLMs
 system_template = """
-    You are a Chess Grandmaster.
-    We are currently playing chess. 
-    You are playing with the {color} pieces.
+You are a Chess Grandmaster.
+We are currently playing chess. 
+You are playing with the {color} pieces.
     
-    I will give you the last move, the history of the game so far, the
-    actual board position and you must analyze the position and find the best move.
+I will give you the last move, the history of the game so far, the
+actual board position and you must analyze the position and find the best move.
 
-    # OUTPUT
-    Do not use any special characters. 
-    Give your response in the following order:
+# OUTPUT
+Do not use any special characters. 
+Give your response in the following order:
 
-    1. Your move, using the following format: My move: "Move" (in the SAN notation, in english).
-    2. The explanation, in Portuguese, of why you chose the move, in no more than 3 sentences.
-    """
+1. Your move, using the following format: My move: "Move" (in the SAN notation, in english).
+2. The explanation, in Portuguese, of why you chose the move, in no more than 3 sentences.
+"""
 
 prompt_template1 = ChatPromptTemplate.from_messages([
     ("system", system_template.format(color="white")), 
@@ -59,30 +63,87 @@ chain1 = prompt_template1 | llm1
 chain2 = prompt_template2 | llm2
 
 judge_template = """
-    You are a professional chess arbiter, working on a LLM's Chess Competition.
+You are a professional chess arbiter, working on a LLM's Chess Competition.
 
-    Your job is to parse last player's move and ensure that all chess moves are valid and correctly formatted in 
-    Standard Algebraic Notation (SAN) for processing by the python-chess library.
+Your job is to parse last player's move and ensure that all chess moves are valid and correctly formatted in 
+Standard Algebraic Notation (SAN) for processing by the python-chess library.
 
-    ### Input:
-    - Last player's  move
-    - List of valid moves in SAN
+### Input:
+- Last player's  move
+- List of valid moves in SAN
 
-    ### Output:
-    - Return the corresponding move in the list of valid SAN moves.
-    - If the proposed move is not in the valid moves list, must respond with "None"
+### Output:
+- Return the corresponding move in the list of valid SAN moves.
+- If the proposed move is not in the valid moves list, must respond with "None"
 
-    ### Your turn:
-    - Proposed move: {proposed_move}
-    - List of valid moves: {valid_moves}
+### Your turn:
+- Proposed move: {proposed_move}
+- List of valid moves: {valid_moves}
 
-    You should only respond the valid move, without the move number, nothing more.
-    Your response:
-    """
+You should only respond the valid move, without the move number, nothing more.
+Your response:
+"""
 
 llm3 = ChatGroq(temperature=0, model_name="llama3-70b-8192")
 judge_prompt = PromptTemplate.from_template(template=judge_template)
 chain3 = judge_prompt | llm3
+
+#
+# Improvements for game folders and game assets
+# ./white vs black/game_0/[assets]
+# return game_num and game_folder
+#
+def get_next_game_number(white_player, black_player):
+    # Create folder name based on players
+    folder_name = f"{white_player} vs {black_player}"
+
+    # Check if the folder for the players exists
+    if not os.path.exists(folder_name):
+        # If the folder doesn't exist, create it and set the game number to 1
+        os.makedirs(folder_name)
+        game_num = 1
+    else:
+        # Get a list of subfolders (games) inside the folder
+        game_folders = [f for f in os.listdir(folder_name) if os.path.isdir(os.path.join(folder_name, f))]
+
+        # Check if there are any game folders like 'game_X'
+        if game_folders:
+            # Extract the game numbers from the folder names
+            game_nums = [int(folder.split("_")[1]) for folder in game_folders if folder.startswith("game_")]
+            # Determine the next game number
+            game_num = max(game_nums) + 1
+        else:
+            # If no game folders, set the game number to 1
+            game_num = 1
+
+    # Create the new game folder (e.g., game_1, game_2, etc.)
+    game_folder_path = os.path.join(folder_name, f"game_{game_num}")
+    os.makedirs(game_folder_path)
+
+    return game_num, game_folder_path
+
+
+#
+# Save board as PNG turns and Live Action Game
+# return turn+1
+#
+def screenshot_turn(board,turn,folder_name,game_num):
+    #global chess
+    # Convert the board position to an SVG format
+    board_svg = chess.svg.board(board)
+    # Save the SVG as a PNG file
+    with open(f"{folder_name}/game{game_num}_turn{turn}.png", "wb") as png_file:
+        cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
+
+    # Live Game
+    board_svg = chess.svg.board(board)
+    # Save the SVG as a PNG file
+    with open(f"{folder_name}/_live_game.png", "wb") as png_file:
+        cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
+
+    #sleep(5) 		# uncomment if game is too fast and cant render PNG
+    return turn+1
+
 
 move_raw = ""
 def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
@@ -96,15 +157,17 @@ def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
     legal_moves = list(board.legal_moves)
     san_moves = str([board.san(move) for move in legal_moves])
 
+    #sleep(5) # uncomment for some LLM versions do not return high usage error)
+
     template_input=""" 
-        Here's the history of the game:
-        {history}
+Here's the history of the game:
+{history}
 
-        The last move played was: 
-        {last_move}   
+The last move played was: 
+{last_move}   
 
-        Find the best move.
-    """
+Find the best move.
+"""
     
     if not alert_msg:
         user_input = template_input.format(
@@ -112,24 +175,24 @@ def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
                                     history=history)
     else:  
         user_input="""
-        Here's the actual board position: 
-        {str_board}
+Here's the actual board position: 
+{str_board}
 
-        Here is the game history so far:
-        {history}
+Here is the game history so far:
+{history}
 
-        The last move played was: 
-        {last_move}   
+The last move played was: 
+{last_move}   
 
-        Here's a list of valid moves in this position:
-        {san_moves}
+Here's a list of valid moves in this position:
+{san_moves}
 
-        You must choose one of the valid moves.
-        """.format(san_moves=san_moves, 
-                history=history, 
-                str_board=str_board,
-                last_move=last_move,
-                )
+You must choose one of the valid moves.
+""".format(san_moves=san_moves, 
+        history=history, 
+        str_board=str_board,
+        last_move=last_move,
+        )
         
     
     response = llm_chain.invoke({"input": user_input})
@@ -159,10 +222,15 @@ def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
 
 # Inicializando o tabuleiro de xadrez
 for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1. d3", "1. g3", "1. Nc3"]:
-    folder_name = f"{white_player} vs {black_player}"
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-    game_num = max([int(i.split("_")[0]) for i in ["0_0"]+ os.listdir(folder_name)]) + 1
+    # folder_name = f"{white_player} vs {black_player}"
+    # if not os.path.exists(folder_name):
+    #     os.makedirs(folder_name)
+    #     os.makedirs(f"{folder_name}/game_{game_num}")
+    # game_num = max([int(i.split("_")[0]) for i in ["0_0"]+ os.listdir(folder_name)]) + 1
+
+    game_num, folder_name = get_next_game_number(white_player, black_player)
+    print(f"Starting game {game_num} in folder: {folder_name}")
+    turn = 1
 
     print("============")
     print(f"New Game with {move1}")
@@ -171,6 +239,13 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
     # Definir o nó atual como o nó raiz do jogo
     game = chess.pgn.Game()
     node = game
+
+    # game headers
+    game.headers["Event"] = "LLM Chess Arena"
+    game.headers["Site"] = "Cloud"
+    game.headers["Round"] = game_num
+    game.headers["White"] = white_player
+    game.headers["Black"] = black_player
 
     # Loop de jogo
     move_board = board.push_san(move1.split()[-1])
@@ -184,6 +259,7 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
             move2, node = get_move(chain2, move1, board, node, "black", alert)
             c += 1
         print("\n========================")
+        turn = screenshot_turn(board,turn,folder_name,game_num)
         if board.is_game_over():
             break
       
@@ -202,8 +278,8 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
         # print("\n========================")
 
         # game = chess.pgn.Game.from_board(board)
-        game.headers["White"] = white_player
-        game.headers["Black"] = black_player
+        #game.headers["White"] = white_player
+        #game.headers["Black"] = black_player
         with open(f"{folder_name}/{game_num}_game.pgn", "w") as f:
             f.write(str(game))
         # print("\n========================")
