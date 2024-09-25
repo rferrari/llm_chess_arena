@@ -6,6 +6,29 @@
 [Black "llama3-70b-8192"]
 [Result "1-0"]
 
+
+TLDR:
+
+This game shows a highly tactical battle between two LLaMA3 models, with White emerging victorious. Here are the key moments:
+
+Opening Phase: 
+Both players opted for a standard e4-e5 opening, leading to central tension with pawn moves and early knight development. 
+Black chose to contest the center with 3...d5, but White's quick exchanges on d5 gave them a slight edge in controlling the center.
+
+Midgame Tactics: 
+White's aggressive 7. h4 took advantage of Black's premature kingside expansion with 6...g5. 
+White opened the h-file and created attacking chances by sacrificing material, notably the rook on h7, 
+seizing control over Black's exposed kingside.
+
+Final Attack: 
+White's 11. Qh5+ placed Black in a tough spot, forcing defensive moves. 
+The decisive blow came with 12. Qxg6#, delivering checkmate as Black's king was trapped with no escape routes.
+
+White capitalized on Black's weaknesses, especially after 6...g5, and successfully launched a direct kingside attack to secure the win.
+
+
+---
+
 1. e4 e5 { My move: "e5"
 
 By playing e5, I'm challenging White's central control and preparing to develop other pieces. 
