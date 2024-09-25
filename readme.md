@@ -49,7 +49,7 @@ As a chess enthusiast and developer, I stumbled upon this fantastic project and 
 
 |||
 |-|-|
-|<img src="./images/live-action-game.png" alt="Live Action Game"/>|<img src="./images/action-game.gif" alt="Action Game"/>|
+|<img src="./images/live-action-game.png" alt="Live Action Game"/>|<img src="./llama3-70b-8192 vs llama3-70b-8192/current_live_game.gif" alt="Action Game"/>|
 
 ---
 
