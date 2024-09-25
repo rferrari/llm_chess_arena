@@ -1,102 +1,121 @@
 # LLM Chess Arena
 
-## Now with visual Live Action Game
+## Now Featuring Visual Live Action Chess Games
 
-My contribution:
+### My Contribution:
 
-I came acros with this project and as a chess gamer and developer, could not check this out,
-so, i run and love it and had some ideas to contribute with this project. hope you all like it.
+As a chess enthusiast and developer, I stumbled upon this fantastic project and couldn't resist diving into it. After running it and enjoying the experience, I came up with a few ideas to enhance the project. I hope you find them helpful!
 
-- start adding a visual game play.
-Now you can watch the models playing in graphical style! Just need a Image Viewer that reload
-image when it changes, or move it from the each turns images. check the **screenshot_turn** function
-made with help from cairosvg lib
+### Key Modifications:
 
-- Change in board notation
-I noticed that sometimes, the Model seems that was not "seeing" right the board. Trying to capture a piece that is not on that spot.
-So, i remember that we have others notations, that is not so human readable, but maybe the model prefer that way, so why no test
+- **Visual Gameplay:**
+  I've added visual gameplay! You can now watch the models play chess in a graphical format. Simply use an image viewer that refreshes when the image changes, or manually navigate through the images for each turn. Check out the `screenshot_turn` function, which was implemented with the help of the `cairosvg` library.
 
-- New Prompts
-Sometimes, when AI Model is not responding very well, its not theyer fault, its our prompt fault.
-With that in mind i tried to improve the gameplay with others prompts, one for a more aggressive play and
-other with more stratigical play, suggesting traps, gambits, pins and others.
+- **Improved Board Notation:**
+  I noticed that the model sometimes struggled to "see" the board correctly, occasionally attempting to capture pieces that weren't there. To address this, I introduced alternative board notations. Though less human-readable, they may suit the model better.
 
-- Terminal chess board
-I saw some lines of codes commented that was used to print the board on the termina.
-Thats a good idea, lets give it some options? now you have 3 options for terminal board in 3 differents styles
-SAN Notation, FEN Notation or ASCII style.
+- **New Prompts:**
+  When AI models don't perform well, it's often a prompt issue. I created new prompts to improve gameplay: one for aggressive play, and another focusing on strategic moves, including traps, gambits, and pins.
 
-- How long was the match?
-Start counting the matches time, this way we can know how long was that game
-Also, included a sleep function so, depending on the model you are using, you will not
-get high usabe not available message during the games. But keep in mind, it will delay the game
-If you are a pro user, comment those sleep lines and get super fast games.
+- **Terminal Chess Board Options:**
+  The code already had a commented-out feature for printing the board in the terminal, which I found intriguing. Now, there are three options for displaying the board in the terminal: SAN notation, FEN notation, or an ASCII-style board. Or just disable it using opt_print_board = False.
 
-- The model can Quit!
-During the tests, I noticed that sometime, even given the valid moves choices, the model
-keep repeating the same output, so, i got that moves counter and give a use for it.
-If counter is more than 5, indicate that the model dont know what to do, so "it decided" to quit the game
+- **Match Duration:**
+  Matches are now timed, allowing you to see how long each game lasts. A sleep function was also added to prevent high usage issues with certain models, though it will slow down gameplay. If you're a PRO user, feel free to comment out the sleep lines for faster games.
 
-Others:
-- print the current turn on the screen
-- removed empty spaces from prompt (I beleive it counts as tokens)
-- instead of passing prompt game history, now it get the current board in LEN
-- the judge still input the history
+- **Model Resignation:**
+  During testing, I noticed that when models repeat the same output despite valid moves, they are likely stuck. I used the move counter, and if a model repeats the same output for more than five moves, it "decides" to quit.
 
-Analysis:
-- As the original project was analysim two different models, at this project i decided
-to analyse how different prompts can lead model to different results, so I used the 
-same model with different input prompts to see the result.
+### Additional Features:
 
-- With this modifications, i could get more interesting moves and mathces, but it still
-seems two childens playing and discoverying how to play chess. But its was very fun anyway!
+- Displays the current turn on the screen.
+- Removed unnecessary spaces in the prompt to optimize token usage.
+- Now passes the current board state in LEN instead of the entire game history in the prompt.
+- The judge still inputs the game history when model do invalid moves.
 
-- increasing a litte bit the model temperature from 0.1 to 0.3 then to 0.5 seems not affect so much but i think we need more tests to get a better analysis result, you can play with the temperature and let me know what you think about it.
+### Analysis:
 
-- move the game headers to before the game loop
+- Instead of comparing two models, as the original project did, my version analyzes how different prompts affect the same model. Using identical models with various prompts allowed me to observe different outcomes.
+  
+- These modifications resulted in more interesting and diverse moves, though the games sometimes still feel like two children learning to play chess. Nonetheless, it was great fun!
+  
+- Increasing the model's temperature slightly (from 0.1 to 0.3 and then 0.5) didn't have a significant effect, but more testing is needed. Feel free to experiment with the temperature settings and share your results.
+
+- I also moved the game headers to appear before the game loop for a cleaner structure.
+
+---
+
+## Visual Examples:
 
 |||
 |-|-|
-|<img src="./images/action-game.gif"/>|<img src="./images/live-action-game.png"/>|
+|<img src="./images/live-action-game.png" alt="Live Action Game"/>|<img src="./images/action-game.gif" alt="Action Game"/>|
 
+---
 
-# LLM Chess Arena
+## Setup Instructions:
 
-<img src="./images/video.gif"/>
+### Before You Start:
 
-Este é o código fonte do projeto apresentado neste vídeo:
-<br>
-https://www.instagram.com/reel/C8Ndmh2OAze/
+1. **Create a Virtual Environment:**
+   ```
+   python -m venv .venv
+   ```
 
-Este é um script que permite duas LLMs joguem Xadrez, nos permitindo (de maneira simplificada) comparar dois modelos de linguagem.
-Adicionei um histórico de 20 partidas jogadas o ChatGPT-4o e Gemini-1.5 Pro.
+2. Create API keys for ChatGPT and Gemini.
 
+### Lets Build:
 
+3. Clone the project:
+   ```bash
+   git clone https://github.com/your-repo/llm-chess-arena.git
+   cd llm-chess-arena
+   ```
 
-## Como Rodar?
+4. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-1. Clone o projeto.
-2. Crie chaves de acesso para o ChatGPT e o Gemini.
-3. Na pasta do projeto crie um arquivo chamado .env
-4. Coloque suas API Key, no seguinte formato:
+5. If you prefer using a `.env` file in the project directory:
+   ```
+   GOOGLE_API_KEY=your-google-api-key
+   OPENAI_API_KEY=your-openai-api-key
+   ```
+OR
 
-```
-GOOGLE_API_KEY=sua-chave
-OPENAI_API_KEY=sua-chave
-```
+**Export Your API Keys:**
+   You'll need to set up your API keys for ChatGPT and Gemini by exporting them as environment variables:
+   
+   ```bash
+   export GOOGLE_API_KEY="your-api-key"
+   export OPENAI_API_KEY="your-api-key"
+   export GROQ_API_KEY="your-api-key"
+   export BASE_URL="https://api.groq.com"
+   ```
 
-5. Instale as dependências, abrindo seu terminal e usando o comando:
+6. Run the chess arena script:
+   ```bash
+   python chess_arena_with_judge.py
+   ```
 
-`pip install -r requirements.txt`
+---
 
-6. Execute o script `chess_arena_with_judge.py`
+## PNG Live Action Game:
 
+7. Open the game folder at `./model_vs_model/game_1/`.
+8. Use an image viewer to open `./model_vs_model/_live_game.png`. Ensure your viewer auto-refreshes the image when it changes.
+9. Navigate output files and find out more about the game match.
+10. Most important! Have Fun!!!
 
+---
 
-## PNG Live Action Game
+## Credits:
 
-7. Open game folder at ./playser vs player/game_1/
-8. Open _live_game.png picture Viewer that reload image on change.
+This project is based on the original LLM Chess Arena, which allows two language models to play chess and compare their performance. Special thanks to the original creators for their fantastic work. You can find more details and watch the original video here:
 
-<img src="./images/action-game.gif"/>
-<img src="./images/live-action-game.png"/>
+- [Instagram Video](https://www.instagram.com/reel/C8Ndmh2OAze/)
+
+---
+
+Feel free to share feedback, suggestions, or improvements!

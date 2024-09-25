@@ -193,7 +193,7 @@ def get_next_game_number(white_player, black_player):
 def screenshot_turn(board,turn,folder_name,game_num):
     #global chess
     
-    id(opt_screenshots):
+    if(opt_screenshots):
         # Convert the board position to an SVG format
         board_svg = chess.svg.board(board)
         # Save the SVG as a PNG file
