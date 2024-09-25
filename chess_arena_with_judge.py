@@ -1,6 +1,7 @@
 from time import sleep, time
 from datetime import datetime
 from enum import Enum
+import random
 
 import chess
 import chess.pgn
@@ -142,44 +143,17 @@ def get_prompt(type_of_prompt: PromptType, color: str):
 
 
 #
-# Helers functions
-#
-#
-# Map SAN notation to ASCII characters
-#
-def san_to_ascii(board_string):
-  piece_map = {
-      "K": "♚",
-      "Q": "♛",
-      "R": "♜",
-      "B": "♝",
-      "N": "♞",
-      "P": "♟",
-      "k": "♔",
-      "q": "♕",
-      "r": "♖",
-      "b": "♗",
-      "n": "♘",
-      "p": "♙"
-  }
-  for piece in piece_map:
-    board_string = board_string.replace(piece, piece_map[piece])
-  return board_string
-
-
-#
 # Folders structure for game assets outputs
+# Create folder name based on players name
 #     <workspace>./white vs black/game_9/[assets]
 #
 # return current game_num and game_folder
 #
-def get_next_game_number(white_player, black_player):
-    # Create folder name based on players
-    folder_name = f"{white_player} vs {black_player}"
+def get_next_game_number(white_player_name, black_player_name):
+    folder_name = f"{white_player_name} vs {black_player_name}"
 
-    # Check if the folder for the players exists
+    # Check if the folder for the players exists If doesn't exist, create it and set the game number to 1
     if not os.path.exists(folder_name):
-        # If the folder doesn't exist, create it and set the game number to 1
         os.makedirs(folder_name)
         game_num = 1
     else:
@@ -188,13 +162,11 @@ def get_next_game_number(white_player, black_player):
 
         # Check if there are any game folders like 'game_X'
         if game_folders:
-            # Extract the game numbers from the folder names
+            # Extract the game numbers from the folder names Determine the next game number
             game_nums = [int(folder.split("_")[1]) for folder in game_folders if folder.startswith("game_")]
-            # Determine the next game number
             game_num = max(game_nums) + 1
         else:
-            # If no game folders, set the game number to 1
-            game_num = 1
+            game_num = 1    # If no game folders, set the game number to 1
 
     # Create the new game folder (e.g., game_1, game_2, etc.)
     game_folder_path = os.path.join(folder_name, f"game_{game_num}")
@@ -231,17 +203,29 @@ def screenshot_turn(board, turn, folder_name, game_num):
 
     return turn + 1
 
+#
+# Map SAN notation to ASCII characters
+#
+def san_to_ascii(board_string):
+  piece_map = {
+      "K": "♚",
+      "Q": "♛",
+      "R": "♜",
+      "B": "♝",
+      "N": "♞",
+      "P": "♟",
+      "k": "♔",
+      "q": "♕",
+      "r": "♖",
+      "b": "♗",
+      "n": "♘",
+      "p": "♙"
+  }
+  for piece in piece_map:
+    board_string = board_string.replace(piece, piece_map[piece])
+  return board_string
+
 def print_board(board, type="SAN"):
-# _______________
-# ♖ ♘ ♗ ♕ ♔ ♗ . ♖
-# ♙ ♙ ♙ . . ♙ ♙ ♙
-# . . . . . ♘ . .
-# . . . ♙ ♙ . . .
-# . . . ♟ ♟ . . .
-# . . ♞ . . . . .
-# ♟ ♟ ♟ . . ♟ ♟ ♟
-# ♜ . ♝ ♛ ♚ ♝ ♞ ♜
-#----------------
     print("_______________")
     if(type=="SAN"):
         print(str(board))
@@ -251,7 +235,16 @@ def print_board(board, type="SAN"):
     else:
         print(san_to_ascii(str(board)))
     print("----------------")
-
+    # _______________
+    # ♖ ♘ ♗ ♕ ♔ ♗ . ♖
+    # ♙ ♙ ♙ . . ♙ ♙ ♙
+    # . . . . . ♘ . .
+    # . . . ♙ ♙ . . .
+    # . . . ♟ ♟ . . .
+    # . . ♞ . . . . .
+    # ♟ ♟ ♟ . . ♟ ♟ ♟
+    # ♜ . ♝ ♛ ♚ ♝ ♞ ♜
+    #----------------
 
 
 # Criando os LLMChains
@@ -268,18 +261,10 @@ class Player:
 
     def create_prompt_template(self):
         # Define prompt templates based on the prompt type
-        if self.prompt_type == PromptType.AGGRESSIVE:
-            return ChatPromptTemplate.from_messages([
-                ("system", get_prompt(PromptType.AGGRESSIVE, self.color)),
-                ("human", "{input}")
-            ])
-        elif self.prompt_type == PromptType.STRATEGY:
-            return ChatPromptTemplate.from_messages([
-                ("system", get_prompt(PromptType.STRATEGY, self.color)),
-                ("human", "{input}")
-            ])
-        else:
-            raise ValueError("Unknown prompt type")
+        return ChatPromptTemplate.from_messages([
+            ("system", get_prompt(self.prompt_type, self.color)),
+            ("human", "{input}")
+        ])
 
     def __str__(self):
         return f"{self.name} (Prompt: {self.prompt_type.name})"
@@ -287,8 +272,18 @@ class Player:
 
 # Create player instances
 
-white_player = Player("llama3-70b-8192", PromptType.AGGRESSIVE, "white")
-black_player = Player("llama3-70b-8192", PromptType.STRATEGY, "black")
+white_player = Player("llama3-70b-8192", PromptType.DEFAULT, "white")
+black_player = Player("llama3-70b-8192", PromptType.AGGRESSIVE, "black")
+
+llm1 = ChatGroq(temperature=0.1, model=white_player.name,  base_url="https://api.groq.com")
+llm2 = ChatGroq(temperature=0.2, model=black_player.name,  base_url="https://api.groq.com")
+
+chain1 = white_player.prompt_template | llm1
+chain2 = black_player.prompt_template | llm2
+
+llm3 = ChatGroq(temperature=0, model_name="llama3-70b-8192")
+judge_prompt = PromptTemplate.from_template(template=judge_template)
+chain3 = judge_prompt | llm3
 
 # llm = ChatGoogleGenerativeAI(model="gemini-pro")
 #white_player = "GPT-4o"
@@ -305,21 +300,10 @@ black_player = Player("llama3-70b-8192", PromptType.STRATEGY, "black")
 #white_prompt_type = PromptType.AGGRESSIVE
 #black_prompt_type = PromptType.STRATEGY
 
-llm1 = ChatGroq(temperature=0.1, model=white_player.name,  base_url="https://api.groq.com")
-llm2 = ChatGroq(temperature=0.3, model=black_player.name,  base_url="https://api.groq.com")
-
 # memory = ConversationBufferMemory(memory_key="chat_history", input_key="input")
 # memory2 = ConversationBufferMemory(memory_key="chat_history", input_key="input")
 # chain1 = LLMChain(llm=llm1, prompt=prompt_template1, memory=memory)
 # chain2 = LLMChain(llm=llm2, prompt=prompt_template2, memory=memory2)
-
-chain1 = white_player.prompt_template | llm1
-chain2 = black_player.prompt_template | llm2
-
-llm3 = ChatGroq(temperature=0, model_name="llama3-70b-8192")
-judge_prompt = PromptTemplate.from_template(template=judge_template)
-chain3 = judge_prompt | llm3
-
 
 #
 # Get Next Move From LLM Model
@@ -413,7 +397,18 @@ You MUST choose a valid moves for this position:
 # Inicializando o tabuleiro de xadrez,
 # cada jogo, forca iniciar com um novo movimento
 #
-for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1. d3", "1. g3", "1. Nc3"]:
+
+# Function to get a shuffled list of moves
+def get_shuffled_moves(first_moves):
+    random.shuffle(first_moves)        # Shuffle the copied list
+    return first_moves
+
+# List of possible first moves
+first_moves = ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1. d3", "1. g3", "1. Nc3"]
+# Get a new shuffled list for this game
+first_moves = get_shuffled_moves(first_moves)
+
+for move1 in first_moves:
     game_num, folder_name = get_next_game_number(white_player.name, black_player.name)
     print(f"Starting game {game_num} in folder: {folder_name}")
 
@@ -489,32 +484,24 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
         # continue next turn
         print("\n========================")
 
-
         # game = chess.pgn.Game.from_board(board)
         # print(str(game))
-        # game = chess.pgn.Game.from_board(board)
-        #game.headers["White"] = white_player
-        #game.headers["Black"] = black_player
+        #board_game = chess.pgn.Game.from_board(board)           ## ?
 
-    with open(f"{folder_name}/{game_num}_game.pgn", "w") as f:
-        f.write(str(game))
-        if(white_quit):
-            f.write(str("White Quit"))
-        if(black_quit):
-            f.write(str("Black Quit"))
+        with open(f"{folder_name}/{game_num}_game.pgn", "w") as f:
+            #f.write(str(board_game))
+            f.write(str(game))
 
         # print("\n========================")
         # print(game)
 
     print()
 
-    # Record the end time
-    end_time = time()
     # Calculate the elapsed time minutes and seconds
+    end_time = time()
     elapsed_time = end_time - start_time
     minutes = int(elapsed_time // 60)
-    seconds = int(elapsed_time % 60)
-    print(f"Elapsed time: {minutes} minutes and {seconds} seconds\n")
+    seconds = int(elapsed_time % 60)    
 
     if board.is_stalemate() or board.is_insufficient_material() or board.is_seventyfive_moves() or board.is_fivefold_repetition():
         result = "1/2-1/2"
@@ -526,10 +513,17 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
 
     with open(f"{folder_name}/{game_num}_game.pgn", "w") as f:
         f.write(str(game))
+        if(white_quit):
+            f.write(str("White Quit"))
+        if(black_quit):
+            f.write(str("Black Quit"))
+        f.write(str(chess.pgn.Game.from_board(board)))
+        f.write(f"Elapsed time: {minutes} minutes and {seconds} seconds\n")
         
-    print("Result: " + board.result())
+    print(f"Elapsed time: {minutes} minutes and {seconds} seconds\n")
+    print("Result: " + result)
     print("Game Over")
 
-    newGame = input("Start New Game? [Y/N]")
-    if(newGame.upper == "N"):
+    startNewGame = input("Start New Game? [Y/N]")
+    if(startNewGame.upper() == "N"):
         break
