@@ -1,4 +1,5 @@
 from time import sleep, time
+from datetime import datetime
 
 import chess
 import chess.pgn
@@ -19,15 +20,29 @@ _ = load_dotenv(find_dotenv())
 
 # llm = ChatGoogleGenerativeAI(model="gemini-pro")
 
-white_player = "GPT-4o"
-black_player = "Gemini-Pro"
-llm1 = ChatOpenAI(temperature=0.1, model='gpt-4o')
-llm2 = ChatGoogleGenerativeAI(temperature=0.1, model="gemini-1.5-pro-latest")
+#white_player = "GPT-4o"
+#black_player = "Gemini-Pro"
+#llm1 = ChatOpenAI(temperature=0.1, model='gpt-4o')
+#llm2 = ChatGoogleGenerativeAI(temperature=0.1, model="gemini-1.5-pro-latest")
 
 # white_player = "Gemini-Pro"
 # black_player = "GPT-4o"
 # llm1 = ChatGoogleGenerativeAI(temperature=0.1, model="gemini-1.5-pro-latest")
 # llm2 = ChatOpenAI(temperature=0.1, model='gpt-4o')
+
+
+# custom models vs model
+
+opt_print_board = True                   # print board on screen
+opt_print_validMoves = True              # print valid moves on screen
+opt_screenshots = True                   # print boards Screen Shots
+
+white_player = "llama3-70b-8192"
+black_player = "llama3-70b-8192"
+
+llm1 = ChatGroq(temperature=0.1, model=white_player,  base_url="https://api.groq.com")
+llm2 = ChatGroq(temperature=0.3, model=black_player,  base_url="https://api.groq.com")
+
 
 memory = ConversationBufferMemory(memory_key="chat_history", input_key="input")
 memory2 = ConversationBufferMemory(memory_key="chat_history", input_key="input")
@@ -39,17 +54,51 @@ You will receve the last move and the current board positions.
 You must analyze the board and choose the best move to win the game.
 
 # OUTPUT
-DO NOT use any special characters. 
-Response in the following order:
+- DO NOT use any special characters. 
+- Response in the following order:
 1. Your move in English SAN Notation using the following format: My move: "Move"
-2. A explanation why you choose this move in Portuguese; No more than 3 sentences.
+2. A explanation why you choose this move; No more than 3 sentences.
 """
 
+system_template_strategy = """
+You are a Chess Grandmaster playing with {color} pieces.
+Your task is to analyze the current board position and the last move made by your opponent.
+Use advanced chess strategies to identify the best move that not only defends against threats but also aims to create opportunities for a fast checkmate.
+Focus on coordinating at least three pieces to achieve a strategic advantage, considering tactics such as forks, pins, and discovered attacks.
+
+# OUTPUT
+- DO NOT use any special characters. 
+- Response in the following order:
+1. Your move in English SAN Notation using the following format: My move: "Move"
+2. a brief explanation of your chosen move and how it contributes to your overall strategy for winning the game. MAX: 3 sentences
+"""
+
+system_template_aggressive = """
+You are a Chess Grandmaster playing with {color} pieces.
+Your task is to analyze the current board position and the last move made by your opponent.
+Use aggressive chess strategies to identify the best move that aims to create opportunities for a fast checkmate.
+Forget defence, chase that Queen and King, considering tactics such as traps, pins, and gambits.
+
+# OUTPUT
+- DO NOT use any special characters. 
+- Response in the following order:
+1. Your move in English SAN Notation using the following format: My move: "Move"
+2. a brief explanation of your chosen move and how it contributes to your overall strategy for winning the game. MAX: 3 sentences
+"""
+
+#prompt_template1 = ChatPromptTemplate.from_messages([
+#    ("system", system_template.format(color="white")), 
+#    ("human", "{input}")])
+#prompt_template2 = ChatPromptTemplate.from_messages([
+#    ("system", system_template.format(color="black")), 
+#    ("human", "{input}")])
+
+# New Prompts
 prompt_template1 = ChatPromptTemplate.from_messages([
-    ("system", system_template.format(color="white")), 
+    ("system", system_template_aggressive.format(color="white")), 
     ("human", "{input}")])
 prompt_template2 = ChatPromptTemplate.from_messages([
-    ("system", system_template.format(color="black")), 
+    ("system", system_template_strategy.format(color="black")), 
     ("human", "{input}")])
 
 # Criando os LLMChains
@@ -79,9 +128,33 @@ judge_prompt = PromptTemplate.from_template(template=judge_template)
 chain3 = judge_prompt | llm3
 
 #
-# Improvements for game folders and game assets
-# ./white vs black/game_0/[assets]
-# return game_num and game_folder
+# Map SAN notation to ASCII characters
+#
+def san_to_ascii(board_string):
+  piece_map = {
+      "K": "♚",
+      "Q": "♛",
+      "R": "♜",
+      "B": "♝",
+      "N": "♞",
+      "P": "♟",
+      "k": "♔",
+      "q": "♕",
+      "r": "♖",
+      "b": "♗",
+      "n": "♘",
+      "p": "♙"
+  }
+  for piece in piece_map:
+    board_string = board_string.replace(piece, piece_map[piece])
+  return board_string
+
+
+#
+# Folders structure for game assets outputs
+#     <workspace>./white vs black/game_9/[assets]
+#
+# return current game_num and game_folder
 #
 def get_next_game_number(white_player, black_player):
     # Create folder name based on players
@@ -119,27 +192,51 @@ def get_next_game_number(white_player, black_player):
 #
 def screenshot_turn(board,turn,folder_name,game_num):
     #global chess
-    # Convert the board position to an SVG format
-    board_svg = chess.svg.board(board)
-    # Save the SVG as a PNG file
-    with open(f"{folder_name}/game{game_num}_turn{turn}.png", "wb") as png_file:
-        cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
+    
+    id(opt_screenshots):
+        # Convert the board position to an SVG format
+        board_svg = chess.svg.board(board)
+        # Save the SVG as a PNG file
+        with open(f"{folder_name}/game{game_num}_turn{turn}.png", "wb") as png_file:
+            cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
 
-    # Live Game
-    board_svg = chess.svg.board(board)
-    # Save the SVG as a PNG file
-    with open(f"{folder_name}/_live_game.png", "wb") as png_file:
-        cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
+        # Live Game
+        board_svg = chess.svg.board(board)
+        # Save the SVG as a PNG file
+        with open(f"{folder_name}/_live_game.png", "wb") as png_file:
+            cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
 
-    #sleep(5) 		# uncomment if game is too fast and cant render PNG
+        # Dont need to open other file when next game start
+        with open(f"{folder_name}/../current_live_game.png", "wb") as png_file:
+            cairosvg.svg2png(bytestring=board_svg, write_to=png_file)
+
+        #sleep(5) 		# uncomment if game is too fast and cant render PNG
     return turn+1
+
+def print_board(board, type="SAN"):
+    print("=======================")
+    if(type=="SAN"):
+        print(str(board))
+    elif (type=="FEN"):
+        # Converta para FEN
+        print(board.fen())
+    else:
+        print(san_to_ascii(str(board)))
 
 
 move_raw = ""
 def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
     global chain3, move_raw
     game_temp = chess.pgn.Game.from_board(board)
-    str_board = str(board)
+    
+    #str_board = str(board)
+    if(opt_print_board):
+        print_board(board, "ASC")
+
+    # Converta para FEN
+    str_board = board.fen()
+    #print(str_board)
+
     history = str(game_temp)
     pattern = r".*?(?=1\. e4)"
     history = re.sub(pattern, "", history, flags=re.DOTALL)
@@ -147,11 +244,12 @@ def get_move(llm_chain, last_move, board, node, color, alert_msg=False):
     legal_moves = list(board.legal_moves)
     san_moves = str([board.san(move) for move in legal_moves])
 
-    print(str(f" {color} Turn ").center(30,"-"))
+    print()
+    print(str(f" Turn {turn} - {color} ").center(30,"="))
     sleep(5) # uncomment for free versions do not return high usage error)
 
     template_input="""
-Actual board position:
+Actual board position (FEN):
 {str_board}
 
 Last move:
@@ -161,13 +259,13 @@ Find the best move.
 """
 
     if not alert_msg:
-        user_input = template_input.format(str_board=str_board,
-                                    last_move=last_move) 
-                                    #,
+        user_input = template_input.format(
+                                    str_board=str_board,
+                                    last_move=last_move) #,
                                     # history=history)
     else:  
         user_input="""
-Actual board position:
+Actual board position (FEN):
 {str_board}
 
 Here is the game history so far:
@@ -197,6 +295,11 @@ You MUST choose a valid moves for this position:
         move = chain3.invoke({"proposed_move": move_raw,
                 "valid_moves": san_moves
             }).content.strip()
+
+        # option print valid moves        
+        if(opt_print_validMoves):
+            print(f"Valid moves: {san_moves}")
+
         print(f"Old move: {move_raw}")
         print("-----")
         print(f"New move: {move}")
@@ -239,12 +342,14 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
     # game headers
     game.headers["Event"] = "LLM Chess Arena"
     game.headers["Site"] = "Cloud"
+    game.headers["Date"] = (datetime.now()).strftime("%Y.%m.%d")
     game.headers["Round"] = game_num
     game.headers["White"] = white_player
     game.headers["Black"] = black_player
 
     # Loop de jogo
     move_board = board.push_san(move1.split()[-1])
+    turn = screenshot_turn(board,turn,folder_name,game_num)
     node = node.add_variation(move_board)
 
     while not board.is_game_over():    
@@ -280,7 +385,7 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
                 break
         print("\n========================")
 
-        turn = screenshot_board(board,turn,folder_name,game_num)
+        turn = screenshot_turn(board,turn,folder_name,game_num)
         if (board.is_game_over() or (white_quit)):
             break
         # game = chess.pgn.Game.from_board(board)
@@ -293,7 +398,11 @@ for move1 in ["1. e4", "1. d4", "1. c4", "1. Nf3", "1. b3", "1. c3", "1. e3", "1
 
         with open(f"{folder_name}/{game_num}_game.pgn", "w") as f:
             f.write(str(game))
-        # print("\n========================")
+            if(white_quit):
+                f.write(str("White Quit"))
+            if(black_quit):
+                f.write(str("Black Quit"))
+        print("\n========================")
         # print(game)
 
     # Record the end time
