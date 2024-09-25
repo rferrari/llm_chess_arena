@@ -68,7 +68,7 @@ As a chess enthusiast and developer, I stumbled upon this fantastic project and 
 
 3. Clone the project:
    ```bash
-   git clone https://github.com/your-repo/llm-chess-arena.git
+   git clone https://github.com/rferrari/llm-chess-arena.git
    cd llm-chess-arena
    ```
 
