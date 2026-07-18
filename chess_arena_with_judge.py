@@ -5,6 +5,7 @@ import random
 
 import chess
 import chess.pgn
+import chess.svg
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from dotenv import load_dotenv, find_dotenv
 from langchain.memory import ConversationBufferMemory
@@ -13,7 +14,6 @@ from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import LLMChain
-import chess.pgn
 import cairosvg
 
 import re
@@ -428,7 +428,7 @@ for move1 in first_moves:
     game.headers["Event"] = "LLM Chess Arena"
     game.headers["Site"] = "Cloud"
     game.headers["Date"] = (datetime.now()).strftime("%Y.%m.%d")
-    game.headers["Round"] = game_num
+    game.headers["Round"] = str(game_num)
     game.headers["White"] = str(white_player)
     game.headers["Black"] = str(black_player)
 
